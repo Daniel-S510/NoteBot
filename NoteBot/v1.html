@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Notes & Lists</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script> <!-- Keep for potential fallback icons if needed -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .note-content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        /* Custom scrollbar for note content */
+        .note-textarea::-webkit-scrollbar {
+            width: 8px;
+        }
+        .note-textarea::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .note-textarea::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .note-textarea::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+
+    <div id="app" class="container mx-auto p-4 md:p-6 lg:p-8 max-w-7xl">
+        
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl md:text-4xl font-bold text-blue-600 dark:text-blue-400">AI Notes & Lists</h1>
+            <div class="flex items-center space-x-2">
+                <span id="userIdDisplay" class="text-xs text-gray-500 dark:text-gray-400 hidden"></span>
+                 <button id="settingsBtn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Add Note Button -->
+        <div class="fixed bottom-8 right-8 z-50">
+            <button id="addNoteBtn" class="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transform hover:scale-110 transition-transform">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+            </button>
+        </div>
+
+        <!-- Notes Grid -->
+        <main id="notes-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <!-- Notes will be dynamically inserted here -->
+        </main>
+        <div id="loadingIndicator" class="text-center p-8 text-gray-500 dark:text-gray-400">Loading notes...</div>
+
+
+        <!-- Modals -->
+
+        <!-- Add/Edit Note Modal -->
+        <div id="noteModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl transform transition-all">
+                <div class="p-6">
+                    <input id="noteTitle" type="text" placeholder="Note Title" class="w-full text-2xl font-bold bg-transparent border-b-2 border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500 mb-4 pb-2">
+                    <select id="noteType" class="w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="note">Standard Note</option>
+                        <option value="list">Checklist</option>
+                    </select>
+                    <div id="noteContentContainer">
+                        <textarea id="noteContent" placeholder="Start writing..." class="w-full h-64 bg-transparent resize-none focus:outline-none note-textarea"></textarea>
+                    </div>
+                    <div id="listContentContainer" class="hidden h-64 overflow-y-auto note-textarea">
+                        <!-- List items will be here -->
+                    </div>
+                    <button id="addListItem" class="hidden mt-2 text-blue-600 dark:text-blue-400 hover:underline">+ Add item</button>
+
+                     <!-- AI Assistant Section -->
+                    <div id="aiAssistantSection" class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                         <h3 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">AI Assistant</h3>
+                         <div class="flex flex-col sm:flex-row gap-2">
+                            <input id="aiPrompt" type="text" placeholder="e.g., 'Create a grocery list'" class="flex-grow bg-gray-100 dark:bg-gray-700 rounded-md p-2 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <button id="aiGenerateBtn" class="bg-indigo-500 text-white px-4 py-2 rounded-md hover:bg-indigo-600 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center">
+                                <svg id="aiIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM6.22 8.22a.75.75 0 011.06 0l1.97 1.97a.75.75 0 01-1.06 1.06L6.22 9.28a.75.75 0 010-1.06zM12.97 6.03a.75.75 0 011.06 0l1.5 1.5a.75.75 0 01-1.06 1.06l-1.5-1.5a.75.75 0 010-1.06zM10 12a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" /></svg>
+                                <span id="aiBtnText">Generate</span>
+                                <svg id="aiSpinner" class="animate-spin h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            </button>
+                         </div>
+                    </div>
+                </div>
+                <div class="bg-gray-100 dark:bg-gray-700 px-6 py-4 flex justify-end space-x-3">
+                    <button id="cancelNote" class="px-4 py-2 rounded-md bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button>
+                    <button id="saveNote" class="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-6 text-center">
+                <h2 class="text-xl font-bold mb-4">Are you sure?</h2>
+                <p class="text-gray-600 dark:text-gray-400 mb-6">This action cannot be undone. This will permanently delete the note.</p>
+                <div class="flex justify-center space-x-4">
+                    <button id="cancelDelete" class="px-6 py-2 rounded-md bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button>
+                    <button id="confirmDelete" class="px-6 py-2 rounded-md bg-red-600 text-white hover:bg-red-700">Delete</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+                 <div class="p-6">
+                    <h2 class="text-2xl font-bold mb-4">Settings</h2>
+                    <div class="mb-4">
+                        <label for="apiKey" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Gemini API Key (Optional)</label>
+                        <input type="password" id="apiKey" class="w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your API key">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Your key is saved securely in your browser's local storage.</p>
+                    </div>
+                    <div class="mb-4">
+                        <label for="userIdInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Your User ID</label>
+                        <p id="settingsUserId" class="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 p-2 rounded-md break-all"></p>
+                    </div>
+                 </div>
+                 <div class="bg-gray-100 dark:bg-gray-700 px-6 py-4 flex justify-end">
+                    <button id="closeSettings" class="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">Close</button>
+                 </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Firebase Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, doc, addDoc, getDocs, setDoc, deleteDoc, onSnapshot, query, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        
+        // --- Firebase Configuration ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "YOUR_API_KEY", authDomain: "YOUR_AUTH_DOMAIN", projectId: "YOUR_PROJECT_ID" };
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-notes-app';
+
+        // --- Firebase Initialization ---
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        
+        setLogLevel('debug'); // For development, shows detailed logs.
+
+        let currentUserId = null;
+        let notesCollectionRef = null;
+        let notesUnsubscribe = null; // To detach the listener later
+
+        // --- UI Elements ---
+        const notesContainer = document.getElementById('notes-container');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const addNoteBtn = document.getElementById('addNoteBtn');
+        const noteModal = document.getElementById('noteModal');
+        const noteTitle = document.getElementById('noteTitle');
+        const noteType = document.getElementById('noteType');
+        const noteContentContainer = document.getElementById('noteContentContainer');
+        const noteContent = document.getElementById('noteContent');
+        const listContentContainer = document.getElementById('listContentContainer');
+        const addListItemBtn = document.getElementById('addListItem');
+        const saveNoteBtn = document.getElementById('saveNote');
+        const cancelNoteBtn = document.getElementById('cancelNote');
+        const deleteModal = document.getElementById('deleteModal');
+        const confirmDeleteBtn = document.getElementById('confirmDelete');
+        const cancelDeleteBtn = document.getElementById('cancelDelete');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsModal = document.getElementById('settingsModal');
+        const closeSettingsBtn = document.getElementById('closeSettings');
+        const apiKeyInput = document.getElementById('apiKey');
+        const userIdDisplay = document.getElementById('userIdDisplay');
+        const settingsUserId = document.getElementById('settingsUserId');
+        
+        // AI Elements
+        const aiAssistantSection = document.getElementById('aiAssistantSection');
+        const aiPrompt = document.getElementById('aiPrompt');
+        const aiGenerateBtn = document.getElementById('aiGenerateBtn');
+        const aiBtnText = document.getElementById('aiBtnText');
+        const aiSpinner = document.getElementById('aiSpinner');
+        
+        let noteToEditId = null;
+        let noteToDeleteId = null;
+
+        // --- Authentication ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                console.log("User is signed in with UID:", user.uid);
+                currentUserId = user.uid;
+                userIdDisplay.textContent = `ID: ${currentUserId.substring(0, 8)}...`;
+                userIdDisplay.classList.remove('hidden');
+                settingsUserId.textContent = currentUserId;
+                
+                // Set up the Firestore collection reference for the logged-in user
+                notesCollectionRef = collection(db, 'artifacts', appId, 'users', currentUserId, 'notes');
+                
+                // Fetch and listen for real-time updates
+                loadNotes();
+            } else {
+                console.log("User is not signed in.");
+                currentUserId = null;
+                userIdDisplay.classList.add('hidden');
+                if (notesUnsubscribe) notesUnsubscribe(); // Detach old listener
+                notesContainer.innerHTML = '<p class="text-center col-span-full">Please sign in to see your notes.</p>';
+                loadingIndicator.classList.add('hidden');
+            }
+        });
+
+        async function initializeAuth() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Authentication Error:", error);
+                loadingIndicator.textContent = "Authentication failed. Please refresh.";
+            }
+        }
+        
+
+        // --- Data Loading & Rendering ---
+        const loadNotes = () => {
+            if (!notesCollectionRef) return;
+            loadingIndicator.classList.remove('hidden');
+
+            const q = query(notesCollectionRef);
+            
+            if (notesUnsubscribe) notesUnsubscribe(); // Detach previous listener before attaching a new one
+
+            notesUnsubscribe = onSnapshot(q, (snapshot) => {
+                loadingIndicator.classList.add('hidden');
+                if (snapshot.empty) {
+                     notesContainer.innerHTML = '<p class="text-center col-span-full text-gray-500">No notes yet. Click the + button to create one!</p>';
+                } else {
+                    const notes = [];
+                    snapshot.forEach(doc => notes.push({ id: doc.id, ...doc.data() }));
+                    // Sort by timestamp, newest first
+                    notes.sort((a, b) => b.timestamp - a.timestamp);
+                    renderNotes(notes);
+                }
+            }, (error) => {
+                console.error("Error fetching notes:", error);
+                loadingIndicator.textContent = "Failed to load notes.";
+            });
+        };
+
+        const renderNotes = (notes) => {
+            notesContainer.innerHTML = '';
+            notes.forEach(note => {
+                const noteElement = document.createElement('div');
+                noteElement.className = 'bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex flex-col h-64';
+                noteElement.dataset.id = note.id;
+
+                let contentHtml = '';
+                if (note.type === 'list') {
+                    contentHtml = `<ul class="space-y-2 mt-2 flex-grow overflow-y-auto note-textarea">
+                        ${(note.items || []).map(item => `
+                            <li class="flex items-center">
+                                <input type="checkbox" ${item.done ? 'checked' : ''} class="mr-3 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" data-item-text="${item.text}">
+                                <span class="${item.done ? 'line-through text-gray-500' : ''}">${item.text}</span>
+                            </li>
+                        `).join('')}
+                    </ul>`;
+                } else {
+                    // Truncate long content for display
+                    const truncatedContent = note.content.length > 200 ? note.content.substring(0, 200) + '...' : note.content;
+                    contentHtml = `<p class="text-gray-700 dark:text-gray-300 mt-2 flex-grow overflow-y-auto note-content note-textarea">${truncatedContent}</p>`;
+                }
+
+                noteElement.innerHTML = `
+                    <div class="flex-grow flex flex-col overflow-hidden">
+                        <h2 class="text-xl font-bold truncate">${note.title}</h2>
+                        <span class="text-xs text-gray-400 mb-2">${new Date(note.timestamp).toLocaleString()}</span>
+                        ${contentHtml}
+                    </div>
+                    <div class="flex justify-end items-center mt-4 pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <button class="edit-btn p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 mr-2">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z" /></svg>
+                        </button>
+                        <button class="delete-btn p-2 rounded-full text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                    </div>
+                `;
+                notesContainer.appendChild(noteElement);
+            });
+        };
+        
+        // --- Modal Handling ---
+        const openNoteModal = (note = null) => {
+            noteModal.classList.remove('hidden');
+            aiPrompt.value = ''; // Clear AI prompt on open
+            if (note) {
+                noteToEditId = note.id;
+                noteTitle.value = note.title;
+                noteType.value = note.type;
+                if (note.type === 'list') {
+                    renderListItems(note.items || []);
+                    switchNoteType('list');
+                } else {
+                    noteContent.value = note.content;
+                    switchNoteType('note');
+                }
+            } else {
+                noteToEditId = null;
+                noteTitle.value = '';
+                noteType.value = 'note';
+                noteContent.value = '';
+                renderListItems([]);
+                switchNoteType('note');
+            }
+        };
+
+        const closeNoteModal = () => {
+            noteModal.classList.add('hidden');
+            noteToEditId = null;
+        };
+
+        const openDeleteModal = (id) => {
+            noteToDeleteId = id;
+            deleteModal.classList.remove('hidden');
+        };
+
+        const closeDeleteModal = () => {
+            noteToDeleteId = null;
+            deleteModal.classList.add('hidden');
+        };
+
+        const openSettingsModal = () => {
+            apiKeyInput.value = localStorage.getItem('geminiApiKey') || '';
+            settingsModal.classList.remove('hidden');
+        };
+
+        const closeSettingsModal = () => {
+            const newKey = apiKeyInput.value;
+            if (newKey) {
+                localStorage.setItem('geminiApiKey', newKey);
+            } else {
+                localStorage.removeItem('geminiApiKey');
+            }
+            checkApiKeyStatus();
+            settingsModal.classList.add('hidden');
+        };
+
+        // --- Note CRUD Operations ---
+        const handleSaveNote = async () => {
+            if (!notesCollectionRef) {
+                alert("Not authenticated!");
+                return;
+            }
+
+            const title = noteTitle.value.trim();
+            if (!title) {
+                alert('Title cannot be empty.');
+                return;
+            }
+            
+            const type = noteType.value;
+            const data = {
+                title,
+                type,
+                timestamp: Date.now(),
+            };
+
+            if (type === 'list') {
+                const items = [];
+                listContentContainer.querySelectorAll('.list-item').forEach(itemEl => {
+                    items.push({
+                        text: itemEl.querySelector('input[type="text"]').value,
+                        done: itemEl.querySelector('input[type="checkbox"]').checked
+                    });
+                });
+                data.items = items;
+            } else {
+                data.content = noteContent.value;
+            }
+
+            try {
+                if (noteToEditId) {
+                    const noteRef = doc(notesCollectionRef, noteToEditId);
+                    await setDoc(noteRef, data, { merge: true });
+                } else {
+                    await addDoc(notesCollectionRef, data);
+                }
+                closeNoteModal();
+            } catch (error) {
+                console.error("Error saving note: ", error);
+                alert("Failed to save note. See console for details.");
+            }
+        };
+
+        const handleDeleteNote = async () => {
+            if (!noteToDeleteId || !notesCollectionRef) return;
+            try {
+                await deleteDoc(doc(notesCollectionRef, noteToDeleteId));
+                closeDeleteModal();
+            } catch (error) {
+                console.error("Error deleting note: ", error);
+                alert("Failed to delete note. See console for details.");
+            }
+        };
+        
+        // --- Checklist Logic ---
+        const switchNoteType = (type) => {
+             if (type === 'list') {
+                noteContentContainer.classList.add('hidden');
+                listContentContainer.classList.remove('hidden');
+                addListItemBtn.classList.remove('hidden');
+            } else {
+                noteContentContainer.classList.remove('hidden');
+                listContentContainer.classList.add('hidden');
+                addListItemBtn.classList.add('hidden');
+            }
+        };
+
+        const createListItemElement = (item = {text: '', done: false}) => {
+            const li = document.createElement('div');
+            li.className = 'list-item flex items-center space-x-2 mb-2';
+            li.innerHTML = `
+                <input type="checkbox" ${item.done ? 'checked' : ''} class="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0">
+                <input type="text" value="${item.text}" placeholder="List item" class="flex-grow bg-transparent border-b border-gray-300 dark:border-gray-600 focus:outline-none">
+                <button class="remove-list-item text-red-500 hover:text-red-700 p-1 rounded-full flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            `;
+            li.querySelector('.remove-list-item').addEventListener('click', () => li.remove());
+            return li;
+        }
+        
+        const renderListItems = (items) => {
+            listContentContainer.innerHTML = '';
+            items.forEach(item => listContentContainer.appendChild(createListItemElement(item)));
+        };
+        
+        const addListItem = () => {
+            const newItemEl = createListItemElement();
+            listContentContainer.appendChild(newItemEl);
+            newItemEl.querySelector('input[type="text"]').focus();
+        };
+
+        // --- AI Assistant (Gemini) ---
+        const checkApiKeyStatus = () => {
+            const key = localStorage.getItem('geminiApiKey');
+            const isEnabled = !!key;
+            aiPrompt.disabled = !isEnabled;
+            aiGenerateBtn.disabled = !isEnabled;
+            aiPrompt.placeholder = isEnabled ? "e.g., 'Create a grocery list'" : "Add Gemini API Key in Settings";
+        };
+
+        const handleAiGenerate = async () => {
+            const prompt = aiPrompt.value.trim();
+            const apiKey = localStorage.getItem('geminiApiKey');
+            if (!prompt || !apiKey) {
+                alert("Please enter a prompt and ensure your API key is set in settings.");
+                return;
+            }
+
+            // Show loading state
+            aiBtnText.classList.add('hidden');
+            aiSpinner.classList.remove('hidden');
+            aiGenerateBtn.disabled = true;
+
+            const currentType = noteType.value;
+            const fullPrompt = currentType === 'list' 
+                ? `${prompt}. Return only a simple JSON array of strings, like ["item 1", "item 2"].`
+                : prompt;
+
+            try {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: fullPrompt }] });
+                const payload = { contents: chatHistory };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error.message || `API Error: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    if (currentType === 'list') {
+                        // Attempt to parse the JSON array for the list
+                        try {
+                            const items = JSON.parse(text);
+                            if (Array.isArray(items)) {
+                                const newItems = items.map(itemText => ({text: String(itemText), done: false}));
+                                renderListItems(newItems);
+                            } else {
+                                throw new Error("Response was not a JSON array.");
+                            }
+                        } catch (parseError) {
+                            console.error("Failed to parse AI list response:", parseError);
+                            alert("AI returned a list in an unexpected format. Please try rephrasing your request.");
+                        }
+                    } else {
+                        // For a standard note, just set the content
+                        noteContent.value = text;
+                    }
+                } else {
+                     throw new Error("No content generated. The response might be empty or blocked.");
+                }
+
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                alert(`An error occurred with the AI Assistant: ${error.message}`);
+            } finally {
+                // Restore button state
+                aiBtnText.classList.remove('hidden');
+                aiSpinner.classList.add('hidden');
+                checkApiKeyStatus(); // Re-enables the button if key exists
+            }
+        };
+
+        // --- Event Listeners ---
+        addNoteBtn.addEventListener('click', () => openNoteModal());
+        cancelNoteBtn.addEventListener('click', closeNoteModal);
+        saveNoteBtn.addEventListener('click', handleSaveNote);
+        
+        cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+        confirmDeleteBtn.addEventListener('click', handleDeleteNote);
+        
+        settingsBtn.addEventListener('click', openSettingsModal);
+        closeSettingsBtn.addEventListener('click', closeSettingsModal);
+
+        addListItemBtn.addEventListener('click', addListItem);
+        noteType.addEventListener('change', (e) => switchNoteType(e.target.value));
+
+        notesContainer.addEventListener('click', async (e) => {
+            const target = e.target;
+            const noteElement = target.closest('.bg-white');
+            if (!noteElement) return;
+
+            const noteId = noteElement.dataset.id;
+            const noteRef = doc(notesCollectionRef, noteId);
+            
+            if(target.closest('.edit-btn')) {
+                const docSnap = await getDoc(noteRef);
+                if (docSnap.exists()) {
+                    openNoteModal({ id: docSnap.id, ...docSnap.data() });
+                }
+            } else if (target.closest('.delete-btn')) {
+                openDeleteModal(noteId);
+            } else if (target.matches('input[type="checkbox"]')) {
+                 // Handle checking/unchecking list items directly
+                 const docSnap = await getDoc(noteRef);
+                 if (docSnap.exists() && docSnap.data().type === 'list') {
+                     const noteData = docSnap.data();
+                     const itemText = target.dataset.itemText;
+                     const itemIndex = noteData.items.findIndex(item => item.text === itemText);
+                     if(itemIndex > -1) {
+                         noteData.items[itemIndex].done = target.checked;
+                         await setDoc(noteRef, noteData, { merge: true });
+                     }
+                 }
+            }
+        });
+        
+        aiGenerateBtn.addEventListener('click', handleAiGenerate);
+
+
+        // --- Initial Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeAuth();
+            checkApiKeyStatus();
+        });
+
+    </script>
+
+</body>
+</html>
